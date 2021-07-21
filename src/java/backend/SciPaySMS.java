@@ -56,6 +56,14 @@ public class SciPaySMS {
                 res = balance(phone, i_a[1]);
                 break;
                 
+            case"recharge":
+                res = rechargeAPI(phone, i_a[1]);
+                break;
+                
+            case"confirmtopup":
+                res = topUpAPI(phone, i_a[1]);
+                break;
+                    
         }
         
         return res;
@@ -107,7 +115,23 @@ public class SciPaySMS {
         json.put("type", walletBal.walletBalance(phone, Tokens)); 
         return json.toString();
     }
+    Recharge newRecharge = new Recharge();
+    public String rechargeAPI(String phone, String sms) 
+            throws JSONException, ClassNotFoundException, SQLException {
+        
+        json = new JSONObject();
+        String[] Tokens = sms.split(" ");
+        json.put("type", newRecharge.recharge(phone, Tokens)); 
+        return json.toString();
+    }
     
+    public String topUpAPI(String phone, String sms) 
+            throws JSONException, ClassNotFoundException, SQLException {
+        json = new JSONObject();
+        String[] Tokens = sms.split(" ");
+        json.put("type", newRecharge.topUp(phone, Tokens)); 
+        return json.toString();
+    }
     
     @Path("test")
     @GET

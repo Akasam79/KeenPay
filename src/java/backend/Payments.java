@@ -52,27 +52,31 @@ public class Payments {
                                 if(Balance >= amount){
 
                                     try(Connection dbconn = dbConn.dbConnect()){
-                                                String query = "SELECT * FROM merchant";
+                                                String query = "SELECT * FROM merchant where mShortCode = ?";
                                                 PreparedStatement statement = dbconn.prepareStatement(query);
+                                                statement.setString(1, mShortCode);
                                                 ResultSet res = statement.executeQuery();
                                                 while(res.next()){
+                                                    firstName = res.getString("firstName");
+                                                    lastName = res.getString("lastName");
+                                                    String fullName = firstName + " " + lastName;
+                                                    String payeePhone = res.getString("phone");
                                                     if(res.getString("mshortcode").equals(mShortCode)){
 
                                                         String payer = payerFN +" "+ payerLN;
 
                                                         try(Connection conn = dbConn.dbConnect()){
-                                                            String SQL = "INSERT INTO activepayments(phone, transID, payer, payee, amount)"
-                                                                    + " VALUES (?,?,?,?,?)";
+                                                            String SQL = "INSERT INTO activepayments(phone, transID, payer, payeePhone, payeeName, amount)"
+                                                                    + " VALUES (?,?,?,?,?,?)";
                                                             PreparedStatement stmt = conn.prepareStatement(SQL);
 
                                                             stmt.setString(1,phone);
                                                             stmt.setString(2,transID);
                                                             stmt.setString(3, payer);
-                                                            stmt.setString(4, mShortCode);
-                                                            stmt.setInt(5, amount);
+                                                            stmt.setString(4, payeePhone);
+                                                            stmt.setString(5, fullName);
+                                                            stmt.setInt(6, amount);
 
-                                                            firstName = res.getString("firstName");
-                                                            lastName = res.getString ("lastName");
                                                             stmt.execute();
 
                                                         } 
@@ -97,7 +101,7 @@ public class Payments {
         }
            catch (ClassNotFoundException | SQLException ex) {
             Logger.getLogger(SciPaySMS.class.getName()).log(Level.SEVERE, null, ex);
-           return "failed";
+           return "failed " + ex.getMessage() ;
         }
        
     }
@@ -143,24 +147,25 @@ public class Payments {
                                         String firstName = result.getString("firstName");
                                         String lastName = result.getString("lastName");
                                         String name = firstName +" "+ lastName;
-                                            String mShortCode = rs.getString("payee");
+                                            String mPhone = rs.getString("payeePhone");
                                             int amount = rs.getInt("amount");
                                             
                                             try(Connection dbConect = dbConn.dbConnect()){
-                                                String queryMerch = "SELECT * FROM merchant WHERE mshortcode = ?";
+                                                String queryMerch = "SELECT * FROM merchant WHERE phone = ?";
                                                 PreparedStatement merchStmt = dbConect.prepareStatement(queryMerch);
-                                                merchStmt.setString(1, mShortCode);
+                                                merchStmt.setString(1, mPhone);
                                                 ResultSet resp = merchStmt.executeQuery();
                                                 
                                                 
                                                 while(resp.next()){
-                                                    String merchPhone = resp.getString("phone");
+                                                    String merchName = resp.getString("firstName") + resp.getString("lastName");
                                                     try(Connection newConn = dbConn.dbConnect()){
-                                                        String qry = "INSERT into payments(mShortCode, amount, madeBy) VALUES (?,?,?)";
+                                                        String qry = "INSERT into payments(phone, merchName, amount, madeBy) VALUES (?,?,?,?)";
                                                         PreparedStatement statmnt = newConn.prepareStatement(qry);
-                                                        statmnt.setString(1, mShortCode);
-                                                        statmnt.setInt(2, amount);
-                                                        statmnt.setString(3, name);
+                                                        statmnt.setString(1, mPhone);
+                                                        statmnt.setString(2, merchName);
+                                                        statmnt.setInt(3, amount);
+                                                        statmnt.setString(4, name);
                                                         while(!statmnt.execute()){
                                                             try(Connection connect = dbConn.dbConnect()){
                                                                 String sequel = "SELECT * FROM cwallet WHERE phone =  ?";
@@ -180,7 +185,7 @@ public class Payments {
                                                                             try(Connection Msequel = dbConn.dbConnect()){
                                                                             String qury = "SELECT * FROM mwallet where phone = ?";
                                                                             PreparedStatement init = Msequel.prepareStatement(qury);
-                                                                            init.setString(1, merchPhone);
+                                                                            init.setString(1, mPhone);
                                                                             ResultSet mResult = init.executeQuery();
                                                                             
                                                                                 while(mResult.next()){
@@ -190,7 +195,7 @@ public class Payments {
                                                                                         String Mseql = "UPDATE mwallet SET balance = ? where phone = ?";
                                                                                         PreparedStatement mUpdateStmt = updateMerch.prepareStatement(Mseql);
                                                                                         mUpdateStmt.setInt(1, merchBalance);
-                                                                                        mUpdateStmt.setString(2, merchPhone);
+                                                                                        mUpdateStmt.setString(2, mPhone);
                                                                                         while(!mUpdateStmt.execute()){
                                                                                             try (Connection deleteCon = dbConn.dbConnect()){
                                                                                                 String delQry = "DELETE FROM activepayments WHERE transID = ?";
@@ -235,7 +240,7 @@ public class Payments {
                 return "payment successful";
         }catch (ClassNotFoundException | SQLException ex) {
             Logger.getLogger(SciPaySMS.class.getName()).log(Level.SEVERE, null, ex);
-            return "failed";
+            return "failed " + ex.getMessage();
         }
         
     }
